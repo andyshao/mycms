@@ -1,0 +1,255 @@
+<html>
+<head>
+	<meta http-equiv = "X-UA-Compatible" content = "IE=edge,chrome=1" />
+	<title></title>
+	<script type="text/javascript" src="../layui/layui.js"></script>
+    <link rel="stylesheet" href="../layui/css/layui.css" type="text/css" />
+	<style>
+
+	</style>
+</head>
+<body>
+
+<script id="template" type="text/html">
+  <table class="layui-table">
+    <colgroup>
+      <col width="50">
+      <col width="150">
+      <col width="150">
+      <col width="200">
+      <col>
+    </colgroup>
+    <thead>
+      <tr>
+        <th><input type="checkbox" name="" lay-skin="primary" lay-filter="allChoose"></th>
+        <th>姓名</th>
+        <th>性别</th>
+        <th>年龄</th>
+        <th>所在城市</th>
+      </tr> 
+    </thead>
+    <tbody>
+{{# for(var i = 0, len = d.length; i < len; i++){ }}
+	<tr>
+        <td><input type="checkbox" name="" lay-skin="primary"></td>
+        <td>{{ d[i].name }}</td>
+        <td>{{ d[i].sex }}</td>
+        <td>{{ d[i].age }}</td>
+        <td>{{ d[i].city }}</td>
+	</tr>
+{{# } }}
+    </tbody>
+  </table>
+</script>
+
+<!-- 用于展示表格  -->
+<div class="layui-form" style="padding:20px;">
+    <button class="layui-btn" id="add">新增记录</button>
+    <button class="layui-btn layui-btn-danger" id="delete">删除记录</button>
+    <div id="list">
+	    <div id="table"></div>
+		<div id="page"></div>
+    </div>
+
+</div>
+
+</body>
+
+<script>
+
+//模拟数据
+var data = [{name: '用户01', sex:'男', age:'24', city: '北京'}, 
+        {name: '用户02', sex:'女', age:'22', city: '杭州'}, 
+        {name: '用户03', sex:'男', age:'24', city: '西安'}, 
+        {name: '用户04', sex:'女', age:'22', city: '杭州'}, 
+        {name: '用户05', sex:'男', age:'24', city: '北京'}, 
+        {name: '用户06', sex:'女', age:'22', city: '杭州'}, 
+        {name: '用户07', sex:'男', age:'24', city: '北京'}, 
+        {name: '用户08', sex:'女', age:'22', city: '杭州'}, 
+        {name: '用户09', sex:'男', age:'24', city: '西安'}, 
+        {name: '用户10', sex:'女', age:'22', city: '杭州'}, 
+        {name: '用户11', sex:'男', age:'24', city: '北京'}, 
+        {name: '用户12', sex:'女', age:'22', city: '杭州'}, 
+        {name: '用户13', sex:'男', age:'24', city: '北京'}, 
+        {name: '用户14', sex:'女', age:'22', city: '杭州'}, 
+        {name: '用户15', sex:'女', age:'22', city: '杭州'},
+        {name: '用户16', sex:'女', age:'28', city: '西安'}];
+        
+layui.use(['jquery', 'laytpl', 'laypage', 'layer', 'form'], function(){
+	//加载需要的js组件
+	var laytpl = layui.laytpl;
+	var $ = layui.jquery;
+	var laypage = layui.laypage;
+	var layer = layui.layer;
+	var form = layui.form();
+	
+	//页面初始化
+	$(document).ready(function(){
+		//首次加载 显示第一页数据
+		var firstData = data.concat().splice(0, 5);
+		showData(firstData);
+		
+		//新增记录事件
+		$("#add").on("click",function(){
+			layer.open({
+				title:"新增数据",
+				skin: 'layui-layer-lan',
+				type: 2, 
+				area: ['500px', '400px'], //宽、高
+				closeBtn: 2, //关闭按钮样式
+				anim: 1, //动画样式，目前anim可支持的动画类型有0-6
+				content: 'add.html',
+				success: function(layero, index){},
+				end: function () {}
+				}); 
+		})
+		
+		//删除记录事件
+		$("#delete").on("click",function(){
+			//获取选中的项
+			var child = $("table").find('tbody input[type="checkbox"]:checked');
+			if(child.length == 0){
+				layer.msg('请选择您要删除的项');
+				return;
+			}
+			// 询问框
+			var index = layer.confirm("确认要删除选中的记录吗？", {
+				title : "确认",
+			    closeBtn: 2, //关闭按钮样式
+			    move: false, //禁止拖动
+				btn : [ "确定", "取消" ],
+				cancel: function () {}
+			}, function() { //删除
+				child.each(function(index, item){
+					//删除
+					var name = $(item).parent().parent().children("td").eq(1).text();
+					console.log(name);
+					deleteData(name);
+				});
+				var firstData = data.concat().splice(0, 5);
+				showData(firstData);
+				layer.msg('批量删除数据成功');
+			}, function() { // 取消
+				layer.close(index);
+			});
+
+		})
+		
+		//全选事件
+		form.on('checkbox(allChoose)', function(data){
+			var child = $(data.elem).parents('table').find('tbody input[type="checkbox"]');
+			child.each(function(index, item){
+				item.checked = data.elem.checked;
+			});
+			form.render('checkbox');
+		});
+		
+		//分页相关
+		var nums = 5; //每页显示的数据量
+		laypage({
+			cont : 'page',
+			pages : Math.ceil(data.length / nums), //得到总页数
+			skip: true,
+			jump : function(obj, first) { //触发分页后的回调
+				if (!first) { //点击跳页触发函数自身，并传递当前页：obj.curr
+					var tempData = data.concat().splice(obj.curr * nums - nums, nums);
+					showData(tempData);
+				}
+			}
+		});
+	})
+
+	//显示数据
+	function showData(tableData) {
+		var gettpl = document.getElementById('template').innerHTML;
+		laytpl(gettpl).render(tableData, function(html) {
+			document.getElementById('table').innerHTML = html;
+			var form = layui.form();
+			form.render('checkbox');
+		});
+	}
+	
+	var _tools = {
+		//前端模拟提交成功，后续更改为服务端操作
+		add: function(addData){
+			layer.closeAll();
+			layer.msg('增加数据成功');
+			var userName = addData.userName;
+			var userSex = addData.userSex;
+			var userCity = addData.userCity;
+			var userAge = jsGetAge(addData.userBirthDay);
+			var tempData = {name: userName, sex:userSex, age:userAge, city: userCity};
+			//刷新本地数据
+			data.splice(0, 0, tempData);
+			//显示
+			var firstData = data.concat().splice(0, 5);
+			showData(firstData);
+			
+		}	
+	}
+	
+	 window.tools = _tools;
+	
+	/*根据出生日期算出年龄*/  
+	function jsGetAge(strBirthday){         
+	    var returnAge;  
+	    var strBirthdayArr=strBirthday.split("-");  
+	    var birthYear = strBirthdayArr[0];  
+	    var birthMonth = strBirthdayArr[1];  
+	    var birthDay = strBirthdayArr[2];  
+	      
+	    d = new Date();  
+	    var nowYear = d.getFullYear();  
+	    var nowMonth = d.getMonth() + 1;  
+	    var nowDay = d.getDate();  
+	      
+	    if(nowYear == birthYear){  
+	        returnAge = 0;//同年 则为0岁  
+	    }  
+	    else{  
+	        var ageDiff = nowYear - birthYear ; //年之差  
+	        if(ageDiff > 0){  
+	            if(nowMonth == birthMonth) {  
+	                var dayDiff = nowDay - birthDay;//日之差  
+	                if(dayDiff < 0)  
+	                {  
+	                    returnAge = ageDiff - 1;  
+	                }  
+	                else  
+	                {  
+	                    returnAge = ageDiff ;  
+	                }  
+	            }  
+	            else  
+	            {  
+	                var monthDiff = nowMonth - birthMonth;//月之差  
+	                if(monthDiff < 0)  
+	                {  
+	                    returnAge = ageDiff - 1;  
+	                }  
+	                else  
+	                {  
+	                    returnAge = ageDiff ;  
+	                }  
+	            }  
+	        }  
+	        else  
+	        {  
+	            returnAge = -1;//返回-1 表示出生日期输入错误 晚于今天  
+	        }  
+	    }  
+	    return returnAge;//返回周岁年龄   
+	}
+	
+	//删除数据
+	function deleteData(nameTemp){
+		$.each(data,function(index,item){
+			if(item && item.name && (item.name == nameTemp)){
+				data.splice(index,1);
+			}
+		})
+	}
+
+})
+</script>
+</html>
